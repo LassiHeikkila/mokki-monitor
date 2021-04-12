@@ -2,42 +2,38 @@ package mokkimonitoring
 
 import (
 	"encoding/hex"
-	"fmt"
-	"log"
-	urlpkg "net/url"
 	"time"
 
-	"github.com/LassiHeikkila/mokki-monitoring/influxdb"
-
 	"github.com/LassiHeikkila/go-ruuvi/ruuvi"
+	writeapi "github.com/influxdata/influxdb-client-go/v2/api/write"
 )
 
-func RuuviDataToInfluxDBLineProtocol(ad ruuvi.AdvertisementData) (influxdb.LineProtocol, error) {
-	lp := influxdb.LineProtocol{
-		Measurement: "ruuvidata",
-		TagSet:      make(map[string]string),
-		FieldSet:    make(map[string]influxdb.FieldValue),
-		Timestamp:   time.Now().UTC(),
-	}
+func RuuviDataToInfluxDBPoint(ad ruuvi.AdvertisementData) (string, *writeapi.Point, error) {
+	point := writeapi.NewPointWithMeasurement("ruuvidata")
+	point.SetTime(time.Now().UTC())
+
+	var macaddress string
 	if mac, err := ad.MACAddress(); err == nil {
-		lp.TagSet["sensormac"] = hex.EncodeToString(mac)
+		macaddress = hex.EncodeToString(mac)
+		point.AddTag("sensormac", macaddress)
 	}
 	if temp, err := ad.Temperature(); err == nil {
-		lp.FieldSet["temperature"] = influxdb.NewFieldValue(temp)
+		point.AddField("temperature", temp)
 	}
 	if humidity, err := ad.Humidity(); err == nil {
-		lp.FieldSet["humidity"] = influxdb.NewFieldValue(humidity)
+		point.AddField("humidity", humidity)
 	}
 	if pressure, err := ad.Pressure(); err == nil {
-		lp.FieldSet["pressure"] = influxdb.NewFieldValue(pressure)
+		point.AddField("pressure", pressure)
 	}
 	if batteryvolts, err := ad.BatteryVoltage(); err == nil {
-		lp.FieldSet["batteryvoltage"] = influxdb.NewFieldValue(batteryvolts)
+		point.AddField("batteryvoltage", batteryvolts)
 	}
 
-	return lp, nil
+	return macaddress, point, nil
 }
 
+/*
 func PostToInfluxDB(
 	comms *Comms,
 	data []byte,
@@ -50,14 +46,23 @@ func PostToInfluxDB(
 	vals.Set("org", org)
 	vals.Set("bucket", bucket)
 	postUrl := fmt.Sprintf("%s/%s", url, vals.Encode())
-	status, reply, err := comms.c.Post(postUrl, data, map[string]string{"AUTHORIZATION": fmt.Sprintf("Token %s", token)})
+	req, err := http.NewRequestWithContext(comms.ctx, "POST", postUrl, bytes.NewBuffer(data))
 	if err != nil {
 		return err
 	}
-	if status != 200 {
-		log.Println("Server replied:", reply)
-		return fmt.Errorf("Not OK status code returned: %d", status)
+	req.Header["AUTHORIZATION"] = []string{fmt.Sprintf("Token %s", token)}
+
+	resp, err := comms.c.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		body, _ := ioutil.ReadAll(resp.Body)
+		log.Println("Server replied:", string(body))
+		return fmt.Errorf("Not OK status code returned: %d (%s)", resp.StatusCode, resp.Status)
 	}
 
 	return nil
 }
+*/

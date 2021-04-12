@@ -1,24 +1,26 @@
 package main
 
 import (
-	"encoding/hex"
+	"context"
 	"flag"
 	"io/ioutil"
 	logpkg "log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	dbclient "github.com/influxdata/influxdb-client-go/v2"
+	writeapi "github.com/influxdata/influxdb-client-go/v2/api/write"
 	"github.com/paypal/gatt"
 	"github.com/paypal/gatt/examples/option"
 
-	"github.com/LassiHeikkila/SIM7000/module"
 	"github.com/LassiHeikkila/SIM7000/output"
 	"github.com/LassiHeikkila/go-ruuvi/ruuvi"
 	"github.com/LassiHeikkila/mokki-monitoring/mokkimonitoring"
 )
 
-var ruuviDataHandler func([]byte) = func([]byte) { return }
+var ruuviDataHandler = func([]byte) { return }
 var log *logpkg.Logger
 
 func init() {
@@ -34,29 +36,20 @@ func main() {
 	)
 	flag.Parse()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	log.Println("Loading config from:", *configPath)
 	conf, err := mokkimonitoring.LoadConfig(*configPath)
 	if err != nil {
 		log.Fatal("Failed to load config from", *configPath, ":", err)
 	}
-
-	token := os.Getenv("INFLUXDB_TOKEN")
-	if token == "" {
-		log.Fatal("You need to provide INFLUXDB_TOKEN as environment variable")
-	}
-
-	moduleSettings := module.Settings{
-		APN:                   conf.APN,
-		SerialPort:            conf.SerialDevice,
-		MaxConnectionAttempts: 15,
-	}
 	log.Println("opening comms...")
-	c := mokkimonitoring.NewComms(moduleSettings)
-	if c == nil {
+	httpclient := getHTTPClient(ctx, conf)
+	if httpclient == nil {
 		log.Println("Failed to open comms")
 		return
 	}
-	defer c.Close()
 
 	advertChan := make(chan ruuvi.AdvertisementData)
 
@@ -64,8 +57,7 @@ func main() {
 		if len(b) == 0 {
 			return
 		}
-		log.Println("Device has advertisement payload:", hex.EncodeToString(b))
-
+		//log.Println("Device has advertisement payload:", hex.EncodeToString(b))
 		advert, err := ruuvi.ProcessAdvertisement(b)
 		if err != nil {
 			log.Println("Error processing bytes:", err)
@@ -76,7 +68,7 @@ func main() {
 		advertChan <- advert
 	}
 
-	log.Println("starting bluetooth comms...")
+	log.Println("Starting bluetooth comms...")
 
 	d, err := gatt.NewDevice(option.DefaultClientOptions...)
 	if err != nil {
@@ -91,29 +83,51 @@ func main() {
 	sc := make(chan os.Signal)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM)
 
+	timeToPost := time.NewTicker(time.Duration(conf.UpdateInterval) * time.Second)
+
+	latestPoints := make(map[string]*writeapi.Point)
+
+	printState := func() {
+		for mac, p := range latestPoints {
+			log.Printf("Latest data point for MAC %s:\n", mac)
+			fields := p.FieldList()
+			for _, f := range fields {
+				if f == nil {
+					continue
+				}
+				log.Printf("\t%v\n", *f)
+			}
+		}
+	}
+
+	opts := dbclient.DefaultOptions().SetHTTPClient(httpclient)
+	influxdbclient := dbclient.NewClientWithOptions(conf.InfluxDB.URL, conf.InfluxDB.Token, opts)
+	defer influxdbclient.Close()
+
+	writeAPI := influxdbclient.WriteAPIBlocking(conf.InfluxDB.Org, conf.InfluxDB.Bucket)
+
 	for {
 		select {
 		case <-sc:
 			d.StopScanning()
 			return
 		case advert := <-advertChan:
-			log.Println("Handling advert")
-			lp, err := mokkimonitoring.RuuviDataToInfluxDBLineProtocol(advert)
+			//log.Println("Handling advert")
+			mac, p, err := mokkimonitoring.RuuviDataToInfluxDBPoint(advert)
 			if err != nil {
 				log.Println("Error transforming advert to line protocol:", err)
 				continue
-
 			}
-			lp_data, err := lp.Marshal()
-			if err != nil {
-				log.Println("Error marshalling line protocol struct:", err)
-				continue
-			}
-			log.Println("lp:", string(lp_data))
-			err = mokkimonitoring.PostToInfluxDB(c, lp_data, conf.InfluxDB.URL, conf.InfluxDB.Org, conf.InfluxDB.Bucket, token)
-			if err != nil {
-				log.Println("Error posting data to InfluxDB:", err)
-				continue
+			latestPoints[mac] = p
+		case <-timeToPost.C:
+			printState()
+			log.Println("Writing data to InfluxDB")
+			for _, p := range latestPoints {
+				//log.Printf("point: %#v\n", p)
+				err = writeAPI.WritePoint(ctx, p)
+				if err != nil {
+					log.Println("Error writing record:", err)
+				}
 			}
 		}
 	}
