@@ -1,0 +1,14 @@
+[Unit]
+Description=mokkimonitoring service
+After=network.target
+
+[Service]
+ExecStart=/home/pi/mokki-monitor -conf mokki.json
+WorkingDirectory=/home/pi/
+StandardOutput=file:/home/pi/logs/mokkimonitoring.log
+StandardError=file:/home/pi/logs/mokkimonitoring.err
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target

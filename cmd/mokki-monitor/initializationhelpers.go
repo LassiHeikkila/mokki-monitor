@@ -5,6 +5,7 @@ import (
 	logpkg "log"
 	"net/http"
 	"os"
+	"time"
 
 	https "github.com/LassiHeikkila/SIM7000/https_native"
 	"github.com/LassiHeikkila/mokki-monitoring/mokkimonitoring"
@@ -23,7 +24,7 @@ func getHTTPClient(ctx context.Context, c mokkimonitoring.Config) *http.Client {
 			CertPath:   c.Comms.SIM7000Config.CertificatePath,
 		}
 		if c.Comms.SIM7000Config.TraceLoggingFile != "" {
-			f, err := os.Create(c.Comms.SIM7000Config.TraceLoggingFile)
+			f, err := os.OpenFile(c.Comms.SIM7000Config.TraceLoggingFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 			if err != nil {
 				log.Println("Failed to create file for trace logging modem comms")
 			} else {
@@ -31,7 +32,9 @@ func getHTTPClient(ctx context.Context, c mokkimonitoring.Config) *http.Client {
 				settings.TraceLogger = tracelogger
 			}
 		}
-		httpsclient := https.NewClient(ctx, settings)
+		subctx, cancel := context.WithTimeout(ctx, time.Minute)
+		defer cancel()
+		httpsclient := https.NewClient(subctx, settings)
 		if httpsclient == nil {
 			log.Println("Failed to create SIM7000 http transport!")
 			return nil

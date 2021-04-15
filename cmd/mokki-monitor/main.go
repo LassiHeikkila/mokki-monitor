@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"io/ioutil"
 	logpkg "log"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	dbclient "github.com/influxdata/influxdb-client-go/v2"
+	httpapi "github.com/influxdata/influxdb-client-go/v2/api/http"
 	writeapi "github.com/influxdata/influxdb-client-go/v2/api/write"
 	"github.com/paypal/gatt"
 	"github.com/paypal/gatt/examples/option"
@@ -25,7 +27,7 @@ var log *logpkg.Logger
 
 func init() {
 	logpkg.SetOutput(ioutil.Discard)
-	log = logpkg.New(os.Stdout, "", logpkg.LstdFlags)
+	log = logpkg.New(os.Stdout, "", logpkg.LstdFlags|logpkg.Llongfile|logpkg.Lmicroseconds)
 }
 
 func main() {
@@ -82,6 +84,20 @@ func main() {
 
 	sc := make(chan os.Signal)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		alreadyCalledOnce := false
+		for {
+			<-sc
+			if !alreadyCalledOnce {
+				log.Println("Exit requested, cancelling context!")
+				cancel()
+				alreadyCalledOnce = true
+			} else {
+				log.Println("Graceful exit did not work in time, calling os.Exit(1)!")
+				os.Exit(1)
+			}
+		}
+	}()
 
 	timeToPost := time.NewTicker(time.Duration(conf.UpdateInterval) * time.Second)
 
@@ -100,17 +116,21 @@ func main() {
 		}
 	}
 
-	opts := dbclient.DefaultOptions().SetHTTPClient(httpclient)
+	opts := dbclient.DefaultOptions().SetHTTPClient(httpclient).SetHTTPRequestTimeout(5) // timeout given in seconds
 	influxdbclient := dbclient.NewClientWithOptions(conf.InfluxDB.URL, conf.InfluxDB.Token, opts)
 	defer influxdbclient.Close()
 
 	writeAPI := influxdbclient.WriteAPIBlocking(conf.InfluxDB.Org, conf.InfluxDB.Bucket)
 
+	consequtiveWriteErrors := 0
+	writeErrorLimit := 10
+eventloop:
 	for {
 		select {
-		case <-sc:
+		case <-ctx.Done():
+			log.Println("Context cancelled, stopping bluetooth scanning.")
 			d.StopScanning()
-			return
+			break eventloop
 		case advert := <-advertChan:
 			//log.Println("Handling advert")
 			mac, p, err := mokkimonitoring.RuuviDataToInfluxDBPoint(advert)
@@ -126,11 +146,23 @@ func main() {
 				//log.Printf("point: %#v\n", p)
 				err = writeAPI.WritePoint(ctx, p)
 				if err != nil {
+					if errors.Is(err, &httpapi.Error{}) {
+						// we can tolerate this error, it seems like influxdb gives back 404 every time :/
+						continue
+					}
 					log.Println("Error writing record:", err)
+					consequtiveWriteErrors++
+					if consequtiveWriteErrors >= writeErrorLimit {
+						log.Println("Too many consequtive errors, exiting!")
+						return
+					}
+				} else {
+					consequtiveWriteErrors = 0
 				}
 			}
 		}
 	}
+	log.Println("Exiting")
 }
 
 func onStateChanged(d gatt.Device, s gatt.State) {

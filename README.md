@@ -26,10 +26,19 @@ Example contents:
 {
 	"influxDB": {
 		"url": "http://example.com:8099/",
-		"org": "exampleOrg",
-		"bucket": "data-bucket"
+		"org": "org@example.com",
+		"bucket": "data-bucket",
+		"token": "my secret API token"
 	},
 	"updateIntervalS": 30,
-	""
+	"comms": {
+		"useDefaultClient": false,
+		"useSIM7000": true,
+		"sim7000": {
+			"apn": "internet",
+			"serialDevice": "/dev/ttyS0",
+			"traceLoggingFile": "/var/log/sim7000trace.log"
+		}
+	}
 }
 ```
