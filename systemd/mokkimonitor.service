@@ -1,12 +1,12 @@
 [Unit]
 Description=mokkimonitoring service
-After=network.target
+After=timesync.service
 
 [Service]
 ExecStart=/home/pi/mokki-monitor -conf mokki.json
 WorkingDirectory=/home/pi/
-StandardOutput=file:/home/pi/logs/mokkimonitoring.log
-StandardError=file:/home/pi/logs/mokkimonitoring.err
+StandardOutput=append:/home/pi/logs/mokkimonitoring.log
+StandardError=append:/home/pi/logs/mokkimonitoring.err
 Restart=always
 User=root
 

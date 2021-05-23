@@ -1,6 +1,5 @@
 [Unit]
 Description=Timesync from cellular network
-After=network.target
 
 [Service]
 Type=oneshot
