@@ -1,0 +1,13 @@
+[Unit]
+Description=Timesync from cellular network
+
+[Service]
+Type=oneshot
+ExecStart=/home/pi/timesync.sh &
+WorkingDirectory=/home/pi/
+StandardOutput=append:/home/pi/logs/timesync.log
+Restart=no
+User=root
+
+[Install]
+WantedBy=multi-user.target
