@@ -16,8 +16,7 @@ wrapped by github.com/LassiHeikkila/SIM7000
 The library currently supports HTTP GET and POST, which should be enough for this application.
 
 ## InfluxDB
-Parsed data is POSTed to influxdb. Parameters like URL, org name and bucket are given with config file (see Config section)
-and auth token is given as enviromental variable.
+Parsed data is POSTed to influxdb. Parameters like URL, org name, bucket and auth token are given with config file (see Config section).
 
 ## Config
 Config is JSON formatted file, default path is `/etc/mokki.json`, but path can be changed with `-conf` flag
