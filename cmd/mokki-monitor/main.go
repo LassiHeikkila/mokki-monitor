@@ -116,7 +116,7 @@ func main() {
 		}
 	}
 
-	opts := dbclient.DefaultOptions().SetHTTPClient(httpclient).SetHTTPRequestTimeout(5) // timeout given in seconds
+	opts := dbclient.DefaultOptions().SetHTTPClient(httpclient).SetHTTPRequestTimeout(30) // timeout given in seconds
 	influxdbclient := dbclient.NewClientWithOptions(conf.InfluxDB.URL, conf.InfluxDB.Token, opts)
 	defer influxdbclient.Close()
 
