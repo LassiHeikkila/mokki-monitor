@@ -3,6 +3,8 @@ github.com/LassiHeikkila/SIM7000 v0.1.1-0.20210522125710-5fde7b90dcad h1:hOJKfXB
 github.com/LassiHeikkila/SIM7000 v0.1.1-0.20210522125710-5fde7b90dcad/go.mod h1:awy4e54Zx+VM2+SaP0wzN9QRUUZcS/6an3PrK1gjr+c=
 github.com/LassiHeikkila/SIM7000 v0.1.1 h1:EExZ+8n+TvW4XmJn/y91j2dcPnp+5KVvVAIgU83giTs=
 github.com/LassiHeikkila/SIM7000 v0.1.1/go.mod h1:awy4e54Zx+VM2+SaP0wzN9QRUUZcS/6an3PrK1gjr+c=
+github.com/LassiHeikkila/SIM7000 v0.2.0 h1:0OGCLsUIPzhWn/KJar9Qtaij4cADFhPdAmIxfaaeyKg=
+github.com/LassiHeikkila/SIM7000 v0.2.0/go.mod h1:awy4e54Zx+VM2+SaP0wzN9QRUUZcS/6an3PrK1gjr+c=
 github.com/LassiHeikkila/go-ruuvi v0.0.0-20201217112516-162f771d641a h1:L0jC38yjQAoN2/QU2K9BQ13cRYvqbYNks57x0jonaJ4=
 github.com/LassiHeikkila/go-ruuvi v0.0.0-20201217112516-162f771d641a/go.mod h1:2lC4kwHs2tB2ZHDRebCJZy8mBAp/IHcvseIbprE3Rxk=
 github.com/cyberdelia/templates v0.0.0-20141128023046-ca7fffd4298c/go.mod h1:GyV+0YP4qX0UQ7r2MoYZ+AvYDp12OF5yg4q8rGnyNh4=

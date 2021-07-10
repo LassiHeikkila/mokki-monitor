@@ -17,11 +17,13 @@ func getHTTPClient(ctx context.Context, c mokkimonitoring.Config) *http.Client {
 	}
 	if c.Comms.UseSIM7000 {
 		settings := https.Settings{
-			APN:        c.Comms.SIM7000Config.APN,
-			Username:   c.Comms.SIM7000Config.Username,
-			Password:   c.Comms.SIM7000Config.Password,
-			SerialPort: c.Comms.SIM7000Config.SerialDevice,
-			CertPath:   c.Comms.SIM7000Config.CertificatePath,
+			APN:                     c.Comms.SIM7000Config.APN,
+			Username:                c.Comms.SIM7000Config.Username,
+			Password:                c.Comms.SIM7000Config.Password,
+			SerialPort:              c.Comms.SIM7000Config.SerialDevice,
+			CertPath:                c.Comms.SIM7000Config.CertificatePath,
+			ResponseTimeoutDuration: 20 * time.Second,
+			DelayBetweenCommands:    250 * time.Millisecond,
 		}
 		if c.Comms.SIM7000Config.TraceLoggingFile != "" {
 			f, err := os.OpenFile(c.Comms.SIM7000Config.TraceLoggingFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
