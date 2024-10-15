@@ -1,6 +1,7 @@
 [Unit]
 Description=mokkimonitoring service
 After=timesync.service
+StartLimitIntervalSec=0
 
 [Service]
 ExecStart=/home/pi/mokki-monitor -conf mokki.json
@@ -9,6 +10,7 @@ StandardOutput=append:/home/pi/logs/mokkimonitoring.log
 StandardError=append:/home/pi/logs/mokkimonitoring.err
 Restart=always
 User=root
+RestartSec=30
 
 [Install]
 WantedBy=multi-user.target
