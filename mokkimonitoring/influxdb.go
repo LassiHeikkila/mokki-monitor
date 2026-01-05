@@ -29,6 +29,21 @@ func RuuviDataToInfluxDBPoint(ad ruuvi.AdvertisementData) (string, *writeapi.Poi
 	if batteryvolts, err := ad.BatteryVoltage(); err == nil {
 		point.AddField("batteryvoltage", batteryvolts)
 	}
+	if co2, err := ad.CO2(); err == nil {
+		point.AddField("co2", co2)
+	}
+	if pm2p5, err := ad.PM2p5(); err == nil {
+		point.AddField("pm2p5", pm2p5)
+	}
+	if nox, err := ad.NOX(); err == nil {
+		point.AddField("nox", nox)
+	}
+	if voc, err := ad.VOC(); err == nil {
+		point.AddField("voc", voc)
+	}
+	if lum, err := ad.Luminosity(); err == nil {
+		point.AddField("luminosity", lum)
+	}
 
 	return macaddress, point, nil
 }
