@@ -6,7 +6,7 @@ low cost internet connectivity via a NB-IoT / GPRS module and a low cost compute
 environment monitoring at a remote cabin, visible through an InfluxDB dashboard.
 
 ## Sensors
-Supported sensors are now just Ruuvitags, which are little discs sending out BLE advertisements containing raw data, and Ruuvi Air, which is an indoor air quality measurement device.
+Supported sensors are Ruuvitags, which are little discs sending out BLE advertisements containing raw data, and Ruuvi Air, which is an indoor air quality measurement device.
 This is handled with github.com/LassiHeikkila/go-ruuvi library.
 BLE packets are picked up by the Raspberry Pi bluetooth device and parsed with the library.
 
